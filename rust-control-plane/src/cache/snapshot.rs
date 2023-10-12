@@ -134,10 +134,10 @@ impl Cache for SnapshotCache {
             let type_known_resource_names = stream.known_resource_names(&req.type_url);
             // Check if a different set of resources has been requested.
             if inner.is_requesting_new_resources(req, resources, type_known_resource_names) {
-                if self.ads && check_ads_consistency(req, resources) {
-                    info!("not responding: ads consistency");
-                    return Some(inner.set_watch(&node_id, req, tx));
-                }
+                // if self.ads && check_ads_consistency(req, resources) {
+                //     info!("not responding: ads consistency");
+                //     return Some(inner.set_watch(&node_id, req, tx));
+                // }
                 info!("responding: resource diff");
                 // TODO: Don't hold lock across await boundaries (performance).
                 respond(req, tx, resources, version).await;
@@ -148,12 +148,16 @@ impl Cache for SnapshotCache {
                 // Set a watch because we may receive a new version in the future.
                 info!("set watch: latest version");
                 Some(inner.set_watch(&node_id, req, tx))
+            } else if req.error_detail.is_some() {
+                // We have recieved a Nack, therefore setup a watch for more changes
+                info!("Nack receieved: {}", req.error_detail.as_ref().unwrap().message);
+                Some(inner.set_watch(&node_id, req, tx))
             } else {
                 // The version has changed, so we should respond.
-                if self.ads && check_ads_consistency(req, resources) {
-                    info!("not responding: ads consistency");
-                    return Some(inner.set_watch(&node_id, req, tx));
-                }
+                // if self.ads && check_ads_consistency(req, resources) {
+                //     info!("not responding: ads consistency");
+                //     return Some(inner.set_watch(&node_id, req, tx));
+                // }
                 info!("responding: new version");
                 // TODO: Don't hold lock across await boundaries (performance).
                 respond(req, tx, resources, version).await;

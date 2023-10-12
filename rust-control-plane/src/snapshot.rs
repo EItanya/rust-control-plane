@@ -67,6 +67,14 @@ pub fn hash_resource(resource: Resource) -> String {
     format!("{:x}", hash)
 }
 
+pub fn hash_resources(resources: &HashMap<String, Resource>) -> String {
+    let mut hasher = Sha256::new();
+    for (_, resource) in resources {
+        hasher.update(resource.encode_to_vec());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 #[derive(Clone, Debug)]
 pub struct Resources {
     pub version: String,
