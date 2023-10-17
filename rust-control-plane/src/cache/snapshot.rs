@@ -70,6 +70,7 @@ impl SnapshotCache {
         if let Some(status) = inner.status.get_mut(node) {
             let mut to_delete = Vec::new();
             for (watch_id, watch) in &mut status.watches {
+                // info!("watch triggered type_url={}", &watch.req.type_url);
                 let version = snapshot.version(&watch.req.type_url);
                 if version != watch.req.version_info {
                     to_delete.push(watch_id)
@@ -103,7 +104,18 @@ impl SnapshotCache {
             }
         }
 
-        inner.snapshots.insert(node.to_string(), snapshot.clone());
+        // Do a merge on existing snapshot if it exists
+        match inner.snapshots.get_mut(node) {
+            Some(existing_snapshot) => {
+              for (version, resource) in snapshot.resources.iter() {
+                existing_snapshot.resources.insert(version.clone(), resource.clone());
+              }
+            }
+            None => {
+                inner.snapshots.insert(node.to_string(), snapshot);
+            }
+        }
+        // inner.snapshots.insert(node.to_string(), snapshot.clone());
     }
 
     pub async fn node_status(&self) -> HashMap<String, Instant> {
