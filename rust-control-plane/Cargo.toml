@@ -9,12 +9,14 @@ license = "Apache-2.0"
 
 [dependencies]
 data-plane-api = { version = "0.1.1", path = "../data-plane-api" }
-tonic = "0.8"
+tonic = "0.10"
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 slab = "0.4"
-prost = "0.11"
+prost = "0.12"
 async-trait = "0.1"
 tracing = "0.1"
 sha2 = "0.10"
+prost-wkt-types = "0.5"
+serde = { version = "1.0", features = ["derive"] }

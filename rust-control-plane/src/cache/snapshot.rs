@@ -114,6 +114,11 @@ impl SnapshotCache {
             .map(|(k, v)| (k.clone(), v.last_request_time))
             .collect()
     }
+
+    pub async fn node_data(&self, id: &str) -> Option<Snapshot> {
+        let inner = self.inner.lock().await;
+        inner.snapshots.get(id).cloned()
+    }
 }
 
 #[async_trait]
@@ -150,7 +155,10 @@ impl Cache for SnapshotCache {
                 Some(inner.set_watch(&node_id, req, tx))
             } else if req.error_detail.is_some() {
                 // We have recieved a Nack, therefore setup a watch for more changes
-                info!("Nack receieved: {}", req.error_detail.as_ref().unwrap().message);
+                info!(
+                    "Nack receieved: {}",
+                    req.error_detail.as_ref().unwrap().message
+                );
                 Some(inner.set_watch(&node_id, req, tx))
             } else {
                 // The version has changed, so we should respond.

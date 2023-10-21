@@ -8,7 +8,8 @@ use data_plane_api::envoy::config::route::v3::RouteConfiguration;
 use data_plane_api::envoy::config::route::v3::ScopedRouteConfiguration;
 use data_plane_api::envoy::extensions::transport_sockets::tls::v3::Secret;
 use data_plane_api::envoy::service::runtime::v3::Runtime;
-use data_plane_api::google::protobuf::Any;
+use prost_wkt_types::Any;
+// use data_plane_api::google::protobuf::Any;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -75,9 +76,10 @@ pub fn hash_resources(resources: &HashMap<String, Resource>) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Resources {
     pub version: String,
+    #[serde(flatten)]
     pub items: HashMap<String, Resource>,
 }
 
@@ -91,7 +93,7 @@ impl Resources {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Resource {
     Cluster(Cluster),
     Endpoint(ClusterLoadAssignment),
