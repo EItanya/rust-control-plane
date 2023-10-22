@@ -11,12 +11,15 @@ license = "Apache-2.0"
 prost = "0.12"
 prost-types = "0.12"
 tonic = "0.10"
-prost-wkt = "0.5"
-prost-wkt-types = "0.5"
-serde = { version = "1.0", features = ["derive"] }
+prost-wkt = {version = "0.5", optional = true}
+prost-wkt-types = {version = "0.5", optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [build-dependencies]
 tonic-build = "0.10"
 glob = "0.3"
 prost-build = "0.12"
 prost-wkt-build = "0.5"
+
+[features]
+serde = ["dep:prost-wkt", "dep:prost-wkt-types", "dep:serde"]
