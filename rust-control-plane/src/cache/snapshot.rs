@@ -103,8 +103,20 @@ impl SnapshotCache {
             }
         }
 
-        inner.snapshots.insert(node.to_string(), snapshot.clone());
+        // Do a merge on existing snapshot if it exists
+        match inner.snapshots.get_mut(node) {
+          Some(existing_snapshot) => {
+            for (version, resource) in snapshot.resources.iter() {
+              existing_snapshot.resources.insert(version.clone(), resource.clone());
+            }
+          }
+          None => {
+              inner.snapshots.insert(node.to_string(), snapshot);
+          }
+      }
+      // inner.snapshots.insert(node.to_string(), snapshot.clone());
     }
+
 
     pub async fn node_status(&self) -> HashMap<String, Instant> {
         let inner = self.inner.lock().await;
