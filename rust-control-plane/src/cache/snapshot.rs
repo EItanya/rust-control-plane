@@ -65,54 +65,63 @@ impl SnapshotCache {
     // Updates snapshot associated with a given node so that future requests receive it.
     // Triggers existing watches for the given node.
     pub async fn set_snapshot(&self, node: &str, mut snapshot: Snapshot) {
-        let mut inner = self.inner.lock().await;
+      let mut inner = self.inner.lock().await;
 
-        if let Some(status) = inner.status.get_mut(node) {
-            let mut to_delete = Vec::new();
-            for (watch_id, watch) in &mut status.watches {
+      if let Some(status) = inner.status.get_mut(node) {
+          let mut to_delete = Vec::new();
+          for (watch_id, watch) in &mut status.watches {
+            // This is the problem, it will be empty
+            match snapshot.resources.get(&watch.req.type_url) {
+              Some(_) => {
                 let version = snapshot.version(&watch.req.type_url);
                 if version != watch.req.version_info {
                     to_delete.push(watch_id)
                 }
+              }
+              None => {
+                continue;
+              }
             }
 
-            for watch_id in to_delete {
-                let watch = status.watches.remove(watch_id);
-                let resources = snapshot.resources(&watch.req.type_url);
-                let version = snapshot.version(&watch.req.type_url);
-                info!(
-                    "watch triggered version={} type_url={}",
-                    version, &watch.req.type_url
-                );
-                respond(&watch.req, watch.tx, resources, version).await;
-            }
+          }
 
-            let mut to_delete = Vec::new();
-            for (watch_id, watch) in &mut status.delta_watches {
-                info!("delta watch triggered type_url={}", &watch.req.type_url);
-                let responded =
-                    try_respond_delta(&watch.req, watch.tx.clone(), &watch.stream, &mut snapshot)
-                        .await;
-                if responded {
-                    to_delete.push(watch_id)
-                }
-            }
+          for watch_id in to_delete {
+              let watch = status.watches.remove(watch_id);
+              let resources = snapshot.resources(&watch.req.type_url);
+              let version = snapshot.version(&watch.req.type_url);
+              info!(
+                  "watch triggered version={} type_url={}",
+                  version, &watch.req.type_url
+              );
+              respond(&watch.req, watch.tx, resources, version).await;
+          }
 
-            for watch_id in to_delete {
-                status.delta_watches.remove(watch_id);
-            }
+          let mut to_delete = Vec::new();
+          for (watch_id, watch) in &mut status.delta_watches {
+              info!("delta watch triggered type_url={}", &watch.req.type_url);
+              let responded =
+                  try_respond_delta(&watch.req, watch.tx.clone(), &watch.stream, &mut snapshot)
+                      .await;
+              if responded {
+                  to_delete.push(watch_id)
+              }
+          }
+
+          for watch_id in to_delete {
+              status.delta_watches.remove(watch_id);
+          }
+      }
+
+      // Do a merge on existing snapshot if it exists
+      match inner.snapshots.get_mut(node) {
+        Some(existing_snapshot) => {
+          for (version, resource) in snapshot.resources.iter() {
+            existing_snapshot.resources.insert(version.clone(), resource.clone());
+          }
         }
-
-        // Do a merge on existing snapshot if it exists
-        match inner.snapshots.get_mut(node) {
-          Some(existing_snapshot) => {
-            for (version, resource) in snapshot.resources.iter() {
-              existing_snapshot.resources.insert(version.clone(), resource.clone());
-            }
-          }
-          None => {
-              inner.snapshots.insert(node.to_string(), snapshot);
-          }
+        None => {
+            inner.snapshots.insert(node.to_string(), snapshot);
+        }
       }
       // inner.snapshots.insert(node.to_string(), snapshot.clone());
     }
