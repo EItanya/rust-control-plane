@@ -10,7 +10,7 @@ use slab::Slab;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, debug, warn};
 
 #[derive(Debug)]
 pub struct SnapshotCache {
@@ -89,7 +89,7 @@ impl SnapshotCache {
               let watch = status.watches.remove(watch_id);
               let resources = snapshot.resources(&watch.req.type_url);
               let version = snapshot.version(&watch.req.type_url);
-              info!(
+              debug!(
                   "watch triggered version={} type_url={}",
                   version, &watch.req.type_url
               );
@@ -164,7 +164,7 @@ impl Cache for SnapshotCache {
                 //     info!("not responding: ads consistency");
                 //     return Some(inner.set_watch(&node_id, req, tx));
                 // }
-                info!("responding: resource diff");
+                debug!("responding: resource diff");
                 // TODO: Don't hold lock across await boundaries (performance).
                 respond(req, tx, resources, version).await;
                 return None;
@@ -172,11 +172,11 @@ impl Cache for SnapshotCache {
             if req.version_info == version {
                 // Client is already at the latest version, so we have nothing to respond with.
                 // Set a watch because we may receive a new version in the future.
-                info!("set watch: latest version");
+                debug!("set watch: latest version");
                 Some(inner.set_watch(&node_id, req, tx))
             } else if req.error_detail.is_some() {
                 // We have recieved a Nack, therefore setup a watch for more changes
-                info!(
+                warn!(
                     "Nack receieved: {}",
                     req.error_detail.as_ref().unwrap().message
                 );
@@ -187,7 +187,7 @@ impl Cache for SnapshotCache {
                 //     info!("not responding: ads consistency");
                 //     return Some(inner.set_watch(&node_id, req, tx));
                 // }
-                info!("responding: new version");
+                debug!("responding: new version");
                 // TODO: Don't hold lock across await boundaries (performance).
                 respond(req, tx, resources, version).await;
                 None
@@ -195,7 +195,7 @@ impl Cache for SnapshotCache {
         } else {
             // No snapshot exists for this node, so we have nothing to respond with.
             // Set a watch because we may receive a snapshot for this node in the future.
-            info!("set watch: no snapshot");
+            debug!("set watch: no snapshot");
             Some(inner.set_watch(&node_id, req, tx))
         }
     }
