@@ -71,11 +71,13 @@ pub fn hash_resource(resource: Resource) -> String {
 }
 
 pub fn hash_resources(resources: &HashMap<String, Resource>) -> String {
-    let mut hasher = Sha256::new();
-    for (_, resource) in resources {
-        hasher.update(resource.encode_to_vec());
-    }
-    format!("{:x}", hasher.finalize())
+  let mut ordered = resources.iter().collect::<Vec<_>>();
+  ordered.sort_by_key(|a| a.0);
+  let mut hasher = Sha256::new();
+  for (_, resource) in ordered {
+      hasher.update(resource.encode_to_vec());
+  }
+  format!("{:x}", hasher.finalize())
 }
 
 #[derive(Clone, Debug)]
@@ -158,4 +160,28 @@ impl Resource {
             Resource::ExtensionConfig(config) => config.encode_to_vec(),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use data_plane_api::envoy::config::endpoint::v3::ClusterLoadAssignment;
+
+    use crate::snapshot::{hash_resources, Resource};
+
+
+  #[test]
+  fn test_hashing() {
+    let ep1 = ClusterLoadAssignment{
+      cluster_name: "foo".to_string(),
+      ..Default::default()
+    };
+    let ep2 = ClusterLoadAssignment{
+      cluster_name: "bar".to_string(),
+      ..Default::default()
+    };
+    let mut map: std::collections::HashMap<String, Resource> = std::collections::HashMap::new();
+    map.insert(ep1.cluster_name.clone(), Resource::Endpoint(ep1));
+    map.insert(ep2.cluster_name.clone(), Resource::Endpoint(ep2));
+    println!("hash: {}", hash_resources(&map));
+  }
 }
