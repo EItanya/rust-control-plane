@@ -96,8 +96,8 @@ impl SnapshotCache {
               let resources = snapshot.resources(&watch.req.type_url);
               let version = snapshot.version(&watch.req.type_url);
               debug!(
-                  "watch triggered version={} type_url={}",
-                  version, &watch.req.type_url
+                  "watch triggered: version={}, type_url={}, node_id={}",
+                  version, &watch.req.type_url, node,
               );
               respond(&watch.req, watch.tx, resources, version).await;
           }
