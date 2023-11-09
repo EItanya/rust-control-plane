@@ -7,6 +7,7 @@ use data_plane_api::envoy::service::discovery::v3::{
     DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse, Resource,
 };
 use slab::Slab;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use tokio::sync::Mutex;
@@ -85,8 +86,13 @@ impl SnapshotCache {
 
           }
 
-          for watch_id in to_delete {
-              let watch = status.watches.remove(watch_id);
+          let mut to_delete = to_delete.into_iter().map(|watch_id|status.watches.remove(watch_id)).collect::<Vec<_>>();
+          to_delete.sort_by(|watch1, watch2| -> Ordering {
+            let priority1 = crate::snapshot::type_url::priority(&watch1.req.type_url);
+            let priority2 = crate::snapshot::type_url::priority(&watch2.req.type_url);
+            priority1.cmp(&priority2)
+          });
+          for watch in to_delete {
               let resources = snapshot.resources(&watch.req.type_url);
               let version = snapshot.version(&watch.req.type_url);
               debug!(

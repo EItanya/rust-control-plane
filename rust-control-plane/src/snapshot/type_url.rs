@@ -23,6 +23,21 @@ pub fn shorten(type_url: &str) -> &str {
     type_url.split('.').last().unwrap_or(type_url)
 }
 
+pub fn priority(type_url: &str) -> u8 {
+    match type_url {
+        CLUSTER => 0,
+        ENDPOINT => 1,
+        LISTENER => 2,
+        ROUTE => 3,
+        VIRTUAL_HOST => 4,
+        SECRET => 5,
+        RUNTIME => 6,
+        SCOPED_ROUTE => 7,
+        EXTENSION_CONFIG => 8,
+        _ => 9,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
